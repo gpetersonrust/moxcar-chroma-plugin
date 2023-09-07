@@ -1,8 +1,10 @@
-import makeRequest from '../../../library/utilities/requests/make_requests';
-
+// Import the PapaParse library
 const Papa = require('papaparse');
+
+// Export a class named JSONConverter
 export default class JSONConverter {
   constructor() {
+    // Initialize class properties and DOM element references
     this.convertButton = document.getElementById("convertButton");
     this.mapsToSelect = document.querySelectorAll(".select_csv_map");
     this.mapToUseData = null;
@@ -11,66 +13,90 @@ export default class JSONConverter {
     this.confirmPostButton = document.getElementById("confirm-post");
     this.csvUploadForm = document.getElementById("csv-upload-form");
     this.postTypeSelect = document.getElementById("post-type");
-    this.postTypeValue = "post";
+    this.postTypeValue = "post"; // Default post type
     this.originalJsonArray = [];
     this.mappedJsonArray = [];
     this.csvImporterPopupModal = document.getElementById(
       "csv-importer-popup-modal"
     );
-    this.makeRequest = makeRequest;
 
+    this.csvImporterPopupModalSubmitButton = document.getElementById('csv-importer-popup-modal-submit-btn');
+ 
+
+    // Initialize event listeners for various elements
     this.initializeEventListeners();
   }
 
   initializeEventListeners() {
+    // Add event listeners to mapping elements
     this.mapsToSelect.forEach((map) => {
       map.addEventListener("click", () => {
+        // Parse and store mapping data
         this.mapToUseData = this.createObjectsFromMappingsDataset(
           JSON.parse(map.parentElement.dataset.pairs)
         );
+        // Update keys in the JSON array
         this.mappedJsonArray = this.updateKeys(
           this.originalJsonArray,
           this.mapToUseData
         );
+        // Create a table from the mapped JSON data
         this.createTable(this.mappedJsonArray);
       });
     });
 
+    // Add event listener to post type selection
     this.postTypeSelect.addEventListener("change", () => {
+      // Update the selected post type value
       this.postTypeValue = this.postTypeSelect.value;
       console.log(this.postTypeValue, "post_type_value");
     });
 
+    // Add event listener to the convert button
     this.convertButton.addEventListener("click", () => {
+      // Handle the convert button click
       this.handleConvertButtonClick();
     });
 
+    // Add event listener to the cancel post button
     this.cancelPostButton.addEventListener("click", () => {
+      // Hide post type form and show CSV upload form
       this.postTypeForm.style.display = "none";
       this.csvUploadForm.style.display = "block";
     });
 
+    // Add event listener to the confirm post button
     this.confirmPostButton.addEventListener("click", () => {
+      // Handle the confirm post button click
       this.handleConfirmPostButtonClick();
     });
   }
 
   async handleConvertButtonClick() {
+    // Retrieve the selected CSV file
     const csvFile = document.getElementById("csvFile").files[0];
 
     if (csvFile) {
+      // Read the CSV file as text
       const csvData = await this.readFileAsText(csvFile);
+      // Convert CSV data to JSON
       this.originalJsonArray = this.csvToJson(csvData);
+      // Create a table from the original JSON data
       this.createTable(this.originalJsonArray);
+      // Show the post type form
       this.postTypeForm.style.display = "block";
     } else {
+      // Show an alert if no CSV file is selected
       alert("Please select a CSV file.");
     }
   }
 
   async handleConfirmPostButtonClick() {
+    // Display the CSV importer popup modal
     this.csvImporterPopupModal.style.display = "flex";
     const postTypeElement = document.getElementById("post-type");
+
+    // Add a click event listener to close the modal when clicking outside
     this.csvImporterPopupModal.addEventListener("click", (e) => {
       const target = e.target;
       if (target.classList.contains("csv-importer-popup-modal")) {
@@ -79,13 +105,16 @@ export default class JSONConverter {
       }
     });
 
-    postTypeElement.addEventListener("change", async () => {
+    // Add a change event listener to the post type select element
+    this.csvImporterPopupModalSubmitButton.addEventListener("click", async () => {
       const postType = postTypeElement.value;
+      // Display a confirmation dialog
       const confirmMessage = window.confirm(
         `Are you sure you want to create ${postType} posts?`
       );
 
       if (confirmMessage) {
+        // Hide the post type form
         this.postTypeForm.style.display = "none";
         const { api_url } = moxcar_chroma;
         const buildPosts = api_url + "/build-posts";
@@ -94,6 +123,7 @@ export default class JSONConverter {
           return;
         }
 
+        // Make an HTTP request to create posts
         this.makeRequest(
           buildPosts,
           "POST",
@@ -105,6 +135,7 @@ export default class JSONConverter {
           this.errorHandler
         );
       } else {
+        // Close the modal and reset the post type selection
         this.csvImporterPopupModal.style.display = "none";
         postTypeElement.children[0].selected = true;
       }
@@ -121,6 +152,7 @@ export default class JSONConverter {
   }
 
   csvToJson(csvData) {
+    // Parse CSV data using PapaParse and return JSON
     const results = Papa.parse(csvData, {
       header: true,
       skipEmptyLines: true,
@@ -129,6 +161,7 @@ export default class JSONConverter {
   }
 
   createTable(data) {
+    // Create an HTML table from JSON data
     const tableContainer = document.getElementById("tableContainer");
     tableContainer.innerHTML = "";
     const tableContainerDiv = document.createElement("div");
@@ -166,6 +199,7 @@ export default class JSONConverter {
   }
 
   updateKeys(data, keyMapping) {
+    // Update keys in the JSON data based on a key mapping
     return data.map((item) => {
       const updatedItem = {};
       for (const key in item) {
@@ -180,6 +214,7 @@ export default class JSONConverter {
   }
 
   createObjectsFromMappingsDataset(originalJsonArray) {
+    // Create an object from a dataset of JSON arrays
     const mergedObject = {};
 
     originalJsonArray.forEach((item) => {
@@ -195,6 +230,7 @@ export default class JSONConverter {
 
   async makeRequest(url, method, body, successCallback, errorCallback) {
     try {
+      // Make an HTTP request and handle responses
       const response = await fetch(url, {
         method: method,
         headers: {
@@ -227,15 +263,14 @@ export default class JSONConverter {
   }
 
   successHandler(response) {
+    // Display a success message and reload the page
     alert("Posts created successfully");
-    window.location.reload();
+    // window.location.reload();
   }
 
   errorHandler(error) {
+    // Display an error message and reload the page
     alert(error.message || "An error occurred during the request.");
-    window.location.reload();
+    // window.location.reload();
   }
 }
-
- 
-

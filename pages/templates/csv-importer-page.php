@@ -20,7 +20,9 @@
             <option value="<?php echo $key ?>"><?php echo   $value ?></option>
         <?php endforeach; ?>
     </select>
-    <!-- confirm button -->
+    <!--submit button -->
+    <button class="admin-button" type="button" id="csv-importer-popup-modal-submit-btn" style="
+    margin: 1rem 0;">Submit</button>
       
     </div>
    

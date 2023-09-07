@@ -21,10 +21,61 @@ function register_custom_api_route() {
     ));
 }
 
-function find_post_by_csv_id($csv_id) {
+
+
+function build_posts($request) {
+    $data = json_decode($request->get_body(), true);
+    $post_type = sanitize_text_field($data['post_type']);
+    $posts = $data['posts'];
+ 
+    foreach ($posts as $post_data) {
+        if (empty($post_data['post_title'])) {
+            $failed_posts[] = array(
+                'post_data' => $post_data,
+                'error' => 'Missing post_title',
+            );
+            continue; // Skip this iteration and move to the next post
+        }
+
+        $csv_id =  isset($post_data['csv_id']) ? sanitize_text_field($post_data['csv_id']) : null; // Assuming 'csv_id' is the field you use to match posts
+
+
+       
+         isset($csv_id)  &&   $existing_post = find_post_by_csv_id($post_type, $csv_id);
+
+    
+           
+        if ($existing_post) {
+            $post_type = $existing_post->post_type;
+            // Update the existing post
+            update_existing_post($existing_post->ID, $post_data, $post_type);
+        } else {
+            // Create a new post
+            $post_id = create_new_post($post_type, $post_data);
+
+            if (!$post_id) {
+                $failed_posts[] = array(
+                    'post_data' => $post_data,
+                    'error' => 'Failed to create post',
+                );
+            }
+        }
+    }
+
+    if (!empty($failed_posts)) {
+        return array('message' => 'Posts created/updated with some failures.', 'failed_posts' => $failed_posts, 'success' => false, 'status' => 401);
+    } else {
+        return array('message' => 'All posts created/updated successfully.', 'success' => true, 'status' => 200);
+    }
+}
+
+
+function find_post_by_csv_id($post_type, $csv_id) {
+
+ 
     // Query posts based on the 'csv_id' field
     $args = array(
-        'post_type' => 'your_post_type', // Replace with your actual post type
+        'post_type' =>   $post_type, // Replace with your actual post type
         'meta_key' => 'csv_id', // Replace with the actual custom field name
         'meta_value' => $csv_id,
     );
@@ -61,10 +112,11 @@ function update_meta_values($post_id, $post_data) {
     }
 }
 
-function update_existing_post($post_id, $post_data) {
+function update_existing_post($post_id, $post_data, $post_type) {
     $post_title = sanitize_text_field($post_data['post_title']);
     $post_content = wp_kses_post($post_data['post_content']);
-
+   
+   
     // Update the post's content
     $post_args = array(
         'ID' => $post_id,
@@ -75,10 +127,10 @@ function update_existing_post($post_id, $post_data) {
 
     wp_update_post($post_args);
 
-    // Update custom fields for the post
+    // // Update custom fields for the post
     update_meta_values($post_id, $post_data);
 
-    // Handle post thumbnail updates here if needed
+    // // Handle post thumbnail updates here if needed
     handle_post_thumbnail($post_id, $post_data);
 }
 
@@ -103,47 +155,6 @@ function create_new_post($post_type, $post_data) {
     handle_post_thumbnail($post_id, $post_data);
 
     return $post_id;
-}
-
-function build_posts($request) {
-    $data = json_decode($request->get_body(), true);
-    $post_type = sanitize_text_field($data['post_type']);
-    $posts = $data['posts'];
-    $failed_posts = array(); // Collect failed posts here
-
-    foreach ($posts as $post_data) {
-        if (empty($post_data['post_title'])) {
-            $failed_posts[] = array(
-                'post_data' => $post_data,
-                'error' => 'Missing post_title',
-            );
-            continue; // Skip this iteration and move to the next post
-        }
-
-        $csv_id =  isset($post_data['csv_id']) ? sanitize_text_field($post_data['csv_id']) : null; // Assuming 'csv_id' is the field you use to match posts
-         isset($csv_id)  &&   $existing_post = find_post_by_csv_id($csv_id);
-
-        if ($existing_post) {
-            // Update the existing post
-            update_existing_post($existing_post->ID, $post_data);
-        } else {
-            // Create a new post
-            $post_id = create_new_post($post_type, $post_data);
-
-            if (!$post_id) {
-                $failed_posts[] = array(
-                    'post_data' => $post_data,
-                    'error' => 'Failed to create post',
-                );
-            }
-        }
-    }
-
-    if (!empty($failed_posts)) {
-        return array('message' => 'Posts created/updated with some failures.', 'failed_posts' => $failed_posts, 'success' => false, 'status' => 401);
-    } else {
-        return array('message' => 'All posts created/updated successfully.', 'success' => true, 'status' => 200);
-    }
 }
 
  
